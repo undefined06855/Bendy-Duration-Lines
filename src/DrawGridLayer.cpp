@@ -124,22 +124,6 @@ ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
     return ret;
 }
 
-bool* FakeLevelTools_getLastGameplayRotated() {
-#if defined(GEODE_IS_ANDROID)
-    return LevelTools::getLastGameplayRotated();
-#elif defined(GEODE_IS_WINDOWS)
-    return reinterpret_cast<bool*>(geode::base::get() + 0x6a4c05);
-#endif
-}
-
-// bool* FakeLevelTools_getLastGameplayReversed() {
-// #if defined(GEODE_IS_ANDROID)
-//     return LevelTools::getLastGameplayReversed();
-// #elif defined(GEODE_IS_WINDOWS)
-//     return reinterpret_cast<bool*>(geode::base::get() + 0x6a4c06);
-// #endif
-// }
-
 cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj) {
     auto fields = m_fields.self();
 
@@ -174,11 +158,11 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
      * m_seenRotatedGameplay gets reset at the end of drawLinesForObject
     */
 
-    if (*FakeLevelTools_getLastGameplayRotated()) {
+    if (LevelTools::getLastGameplayRotated()) {
         fields->m_seenRotatedGameplayThisObject = true;
     }
 
-    if (!*FakeLevelTools_getLastGameplayRotated() && !fields->m_seenRotatedGameplayThisObject) {
+    if (!LevelTools::getLastGameplayRotated() && !fields->m_seenRotatedGameplayThisObject) {
         ret.y += obj->getRealPosition().y;
     }
 
@@ -186,7 +170,7 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
     if (fields->m_debug) {
         cocos2d::ccDrawColor4B(
             fields->m_seenRotatedGameplayThisObject ? 255 : 0,
-            *FakeLevelTools_getLastGameplayRotated() ? 255 : 0,
+            LevelTools::getLastGameplayRotated() ? 255 : 0,
             255,
             255
         );
@@ -206,7 +190,7 @@ cocos2d::ccColor4B HookedDrawGridLayer::colorForObject(EffectGameObject* obj, Li
         };
 
         if (part == LinePart::FadeIn) {
-            ret = tintColor(ret, +25);
+            ret = tintColor(ret, +30);
         } else if (part == LinePart::FadeOut) {
             ret = tintColor(ret, -25);
         }
