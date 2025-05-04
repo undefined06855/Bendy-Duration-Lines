@@ -43,7 +43,7 @@
 			"control": { "arrows": false, "slider-step": 0.05 }
 		},
 		"debug": {
-			"name": "Debug",
+			"name": "Draw Debug Points",
 			"type": "bool",
 			"default": false
 		}

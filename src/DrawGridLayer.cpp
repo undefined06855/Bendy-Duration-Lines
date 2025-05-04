@@ -190,7 +190,7 @@ cocos2d::ccColor4B HookedDrawGridLayer::colorForObject(EffectGameObject* obj, Li
         };
 
         if (part == LinePart::FadeIn) {
-            ret = tintColor(ret, +30);
+            ret = tintColor(ret, +35);
         } else if (part == LinePart::FadeOut) {
             ret = tintColor(ret, -25);
         }
