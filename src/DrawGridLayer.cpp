@@ -148,14 +148,19 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
      *
      * now that's all fine and dandy except for some reason if leveltools
      * ends up on unrotated gameplay but the unrotated gameplay happens to also
-     * be what it starts on (it starts on unrotated gameplay but also ends), the
-     * y position is ALWAYS relative to zero, so i ALWAYS need to add y position
+     * be what it starts on (it starts on unrotated gameplay but also ends on
+     * the same block of unrotated gameplay), the y position is ALWAYS relative
+     * to zero, so i ALWAYS need to add y position
      * (2.1 legacy code?)
      *
-     * tl;dr - add y if gameplay ends on unrotated (2.2) UNLESS we have not seen
-     * rotated gameplay (2.1), in which case ALWAYS add y
+     * tl;dr - dont add y if gameplay ends on unrotated (2.2) UNLESS we have not
+     * seen rotated gameplay (2.1), in which case ALWAYS add y
      *
      * m_seenRotatedGameplay gets reset at the end of drawLinesForObject
+     * note: this explanation may have contradicted itself or something, ask if
+     * you want a diagram or if it doesnt make sense or something
+     * also note the red channel of debug points store if rotated gameplay has
+     * been seen on this object
     */
 
     if (LevelTools::getLastGameplayRotated()) {
