@@ -67,9 +67,10 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     );
 
     if (durations.m_fadeInDuration >= 0.01f) {
+        auto col = colorForObject(obj, LinePart::FadeIn);
         for (float t = 0; t < durations.m_fadeInDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
-                .m_col = colorForObject(obj, LinePart::FadeIn),
+                .m_col = col,
                 .m_pos = posForTime(startTime + t, obj)
             });
         }
@@ -78,9 +79,10 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     startTime += durations.m_fadeInDuration;
 
     if (durations.m_baseDuration >= 0.01f) {
+        auto col = colorForObject(obj, LinePart::Base);
         for (float t = 0; t < durations.m_baseDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
-                .m_col = colorForObject(obj, LinePart::Base),
+                .m_col = col,
                 .m_pos = posForTime(startTime + t, obj)
             });
         }
@@ -89,9 +91,10 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     startTime += durations.m_baseDuration;
 
     if (durations.m_fadeOutDuration >= 0.01f) {
+        auto col = colorForObject(obj, LinePart::FadeOut);
         for (float t = 0; t < durations.m_fadeOutDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
-                .m_col = colorForObject(obj, LinePart::FadeOut),
+                .m_col = col,
                 .m_pos = posForTime(startTime + t, obj)
             });
         }
