@@ -3,7 +3,7 @@ by [undefined0](user:13351341)
 
 ---
 
-This mod simply allows duration lines coming out of triggers to bend to the final point, instead of always being straight. It also shows fade in and fade out durations on triggers that support it, as well as the color of any color or pulse triggers!
+This mod simply allows duration lines coming out of triggers to bend to the final point if any arrow triggers mean they should, instead of always being straight. It also shows fade in and fade out durations on triggers that support it, as well as the color of any color or pulse triggers!
 
 This mod also has performance settings! If you experience lag in the editor when lots of triggers are onscreen, you can turn down the limit of lines drawn (by default, GD uses 400 lines as a limit), or the precision of the lines. On the other hand, if you have a good computer, you can turn off culling, to see duration lines of triggers that are offscreen.
 

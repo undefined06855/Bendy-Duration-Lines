@@ -11,11 +11,11 @@
 	"id": "undefined0.bendy_duration_lines",
 	"name": "Bendy Duration Lines",
 	"developer": "undefined0",
-	"description": "Makes duration lines in the editor more accurate!",
+	"description": "Allows duration lines in the editor to bend!",
 	"tags": [ "editor", "enhancement" ],
 
 	"links": {
-		"source": "https://github.com/undefined06855/bendy-duration-lines"
+		"source": "https://github.com/undefined06855/Bendy-Duration-Lines"
 	},
 
 	"settings": {
