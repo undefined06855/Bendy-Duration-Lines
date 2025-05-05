@@ -52,9 +52,8 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     // should we actually draw this object?
     if (
         // 0121 - hide invisible checkbox in editor
-        (GameManager::get()->getGameVariable("0121") && obj->m_isHide && !obj->m_isSelected)
-        || obj->m_isSpawnTriggered || obj->m_isTouchTriggered
-        || (obj->m_isGroupDisabled && !obj->m_isSelected)
+        (GameManager::get()->getGameVariable("0121") && (obj->m_isHide || obj->m_isGroupDisabled) && !obj->m_isSelected)
+        || obj->m_isSpawnTriggered
     ) return;
 
     auto durations = durationForObject(obj);
@@ -66,6 +65,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         m_editorLayer->m_levelSettings->m_platformerMode, true, false, 0
     );
 
+    // fade in line
     if (durations.m_fadeInDuration >= 0.01f) {
         auto col = colorForObject(obj, LinePart::FadeIn);
         for (float t = 0; t < durations.m_fadeInDuration; t += fields->m_resolution) {
@@ -78,6 +78,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     startTime += durations.m_fadeInDuration;
 
+    // base duration line
     if (durations.m_baseDuration >= 0.01f) {
         auto col = colorForObject(obj, LinePart::Base);
         for (float t = 0; t < durations.m_baseDuration; t += fields->m_resolution) {
@@ -90,6 +91,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     startTime += durations.m_baseDuration;
 
+    // fade out line
     if (durations.m_fadeOutDuration >= 0.01f) {
         auto col = colorForObject(obj, LinePart::FadeOut);
         for (float t = 0; t < durations.m_fadeOutDuration; t += fields->m_resolution) {
@@ -100,6 +102,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         }
     }
 
+    // and draw them all
     drawLines(obj->getRealPosition(), points);
     m_fields->m_seenRotatedGameplayThisObject = false;
 }
@@ -142,7 +145,7 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
     );
 
     /*
-     * right so fellas why is this needed
+     * right so fellas why is ret.y += obj->getRealPosition().y; needed
      * when leveltools ends up finishing posForTime on rotated gameplay,
      * getLastGameplayRotated returns true and the y value of the position given
      * is relative to the object, not 0, meaning i should add the y position of
@@ -164,6 +167,8 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
      * you want a diagram or if it doesnt make sense or something
      * also note the red channel of debug points store if rotated gameplay has
      * been seen on this object
+     *
+     * did i only write this to show how much effort it took me? maybe
     */
 
     if (LevelTools::getLastGameplayRotated()) {
@@ -229,6 +234,8 @@ cocos2d::ccColor4B HookedDrawGridLayer::tintColor(cocos2d::ccColor4B col, int am
     // convert to hsl, tint, convert back
     // most of this taken from eclipse though it really couldve been taken from
     // anywhere
+    // TODO: maybe make this more efficient? seems a lot to be running for every
+    // pulse trigger every frame, twice
 
     auto floatCol = cocos2d::ccc4FFromccc4B(col);
 
@@ -274,6 +281,9 @@ cocos2d::ccColor4B HookedDrawGridLayer::tintColor(cocos2d::ccColor4B col, int am
 }
 
 void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments) {
+    // could most likely be improved by using ccDrawLines for segments next to
+    // each other that have the same colour
+
     std::vector<LinePoint> allSegments;
     allSegments.resize(segments.size() + 1);
     allSegments[0] = LinePoint{ .m_pos = start };

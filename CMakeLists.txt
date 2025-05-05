@@ -8,8 +8,6 @@ else()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
-# add_definitions( -DDEBUG_DRAW_POINTS )
-
 project(BendyDurationLines VERSION 1.0.0)
 
 file(GLOB_RECURSE SOURCES
