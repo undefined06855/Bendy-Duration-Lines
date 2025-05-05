@@ -18,12 +18,17 @@ enum class LinePart {
 
 class $modify(HookedDrawGridLayer, DrawGridLayer) {
     struct Fields {
+        // these get reset for every object
         bool m_seenRotatedGameplayThisObject;
+        bool m_lastPointThisObjectWasRotated;
+        bool m_lastPointThisObjectWasReversed;
+        cocos2d::CCPoint m_thisObjectAdjustment;
+        cocos2d::CCPoint m_lastPointThisObject;
 
+        // settings
         double m_resolution;
         bool m_cull;
         unsigned int m_limit;
-
         bool m_debug;
 
         Fields();

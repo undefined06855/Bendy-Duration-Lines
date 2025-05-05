@@ -2,6 +2,11 @@
 
 HookedDrawGridLayer::Fields::Fields()
     : m_seenRotatedGameplayThisObject(false)
+    , m_lastPointThisObjectWasRotated(false)
+    , m_lastPointThisObjectWasReversed(false)
+    , m_thisObjectAdjustment(0.f, 0.f)
+    , m_lastPointThisObject(0.f, 0.f)
+
     , m_resolution(geode::Mod::get()->getSettingValue<double>("precision"))
     , m_cull(geode::Mod::get()->getSettingValue<bool>("cull-offscreen"))
     , m_limit(geode::Mod::get()->getSettingValue<int64_t>("draw-limit"))
@@ -23,6 +28,7 @@ void HookedDrawGridLayer::draw() {
     auto durationObjectCount = m_editorLayer->m_durationObjects->count();
     if (durationObjectCount == 0) return;
     
+    glLineWidth(2.f);
 
     unsigned int count = 0;
     for (auto obj : geode::cocos::CCArrayExt<EffectGameObject*>(m_editorLayer->m_durationObjects)) {
@@ -104,7 +110,12 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     // and draw them all
     drawLines(obj->getRealPosition(), points);
-    m_fields->m_seenRotatedGameplayThisObject = false;
+
+    fields->m_seenRotatedGameplayThisObject = false;
+    fields->m_lastPointThisObjectWasRotated = false;
+    fields->m_lastPointThisObjectWasReversed = false;
+    fields->m_thisObjectAdjustment = cocos2d::CCPoint{ 0.f, 0.f };
+    fields->m_lastPointThisObject = cocos2d::CCPoint{ 0.f, 0.f };
 }
 
 ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
@@ -133,6 +144,9 @@ ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
 cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj) {
     auto fields = m_fields.self();
 
+    // the "current" posForTime/timeForPos position, global var in LevelTools
+    // (*(cocos2d::CCPoint*)(geode::base::get() + 0x6a41c0))
+
     auto ret = LevelTools::posForTimeInternal(
         time,
         m_speedObjects,
@@ -146,6 +160,7 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
 
     /*
      * right so fellas why is ret.y += obj->getRealPosition().y; needed
+     * 
      * when leveltools ends up finishing posForTime on rotated gameplay,
      * getLastGameplayRotated returns true and the y value of the position given
      * is relative to the object, not 0, meaning i should add the y position of
@@ -168,8 +183,9 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
      * also note the red channel of debug points store if rotated gameplay has
      * been seen on this object
      *
-     * did i only write this to show how much effort it took me? maybe
-    */
+     * did i only write this to show how much effort it took me to figure this
+     * out? maybe
+     */
 
     if (LevelTools::getLastGameplayRotated()) {
         fields->m_seenRotatedGameplayThisObject = true;
@@ -178,6 +194,49 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
     if (!LevelTools::getLastGameplayRotated() && !fields->m_seenRotatedGameplayThisObject) {
         ret.y += obj->getRealPosition().y;
     }
+
+    /*
+     * right so fellas why is THIS needed now
+     * 
+     * when we hit an arrow trigger, in LevelTools::posForTimeInternal the
+     * "current" position snaps either on x or y depending on if we've rotated
+     * now snapping isnt what we want, because then the actual length of the
+     * line will not be correct!
+     * so we need to adjust for the snapping, by detecting if we've just snapped
+     * to a new m_speedStart position (wrongly named as all things are to do
+     * with this - although yes it is the start for speed changer objects, it is
+     * also the start for arrow triggers) and if we have just snapped, compare
+     * either the X or the Y, and compensate for that - a
+     * LevelTools::posForTimeInternal rewritten version is in the geode discord
+     * somewhere just ping me for it - i think the if statement on 98 - 126
+     * "breaks" stuff
+     */
+
+    // just changed rotation or reversed, meaning we've hit a new arrow trigger
+    if (LevelTools::getLastGameplayRotated() != fields->m_lastPointThisObjectWasRotated
+    // reversed triggers dont seem to need this and it will break them!
+    //  || LevelTools::getLastGameplayReversed() != fields->m_lastPointThisObjectWasReversed
+    ) {
+        fields->m_thisObjectAdjustment = cocos2d::CCPoint{ 0.f, 0.f };
+        // compare y positions if rotated, else compare x
+        // remember we want to adjust x in terms of y and adjust y in terms of x
+        // since we've just rotated
+        // the primary adjustment is the main one, the secondary is just for
+        // offset relative to the current axis to make it look nice
+        if (LevelTools::getLastGameplayRotated()) {
+            fields->m_thisObjectAdjustment.x += ret.y - fields->m_lastPointThisObject.y; // secondary
+            fields->m_thisObjectAdjustment.y -= ret.y - fields->m_lastPointThisObject.y; // primary
+        } else {
+            fields->m_thisObjectAdjustment.x -= ret.x - fields->m_lastPointThisObject.x; // primary
+            fields->m_thisObjectAdjustment.y += ret.x - fields->m_lastPointThisObject.x; // secondary
+        }
+    }
+    
+    ret += fields->m_thisObjectAdjustment;
+
+    fields->m_lastPointThisObjectWasRotated = LevelTools::getLastGameplayRotated();
+    fields->m_lastPointThisObjectWasReversed = LevelTools::getLastGameplayReversed();
+    fields->m_lastPointThisObject = ret;
 
     // debug - draw points
     if (fields->m_debug) {
