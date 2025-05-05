@@ -49,6 +49,8 @@ void HookedDrawGridLayer::draw() {
             cocos2d::ccDrawCircle(obj->m_speedStart, 3, 0.f, 5, false);
         }
     }
+
+    glLineWidth(1.f);
 }
 
 void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
