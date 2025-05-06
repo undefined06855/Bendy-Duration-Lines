@@ -10,6 +10,9 @@ HookedDrawGridLayer::Fields::Fields()
     , m_resolution(geode::Mod::get()->getSettingValue<double>("precision"))
     , m_cull(geode::Mod::get()->getSettingValue<bool>("cull-offscreen"))
     , m_limit(geode::Mod::get()->getSettingValue<int64_t>("draw-limit"))
+    , m_stripOldArrowTriggers(geode::Mod::get()->getSettingValue<bool>("strip-old-arrow-triggers"))
+    , m_dontOffsetSecondaryAxis(geode::Mod::get()->getSettingValue<bool>("dont-offset-secondary-axis"))
+    , m_ignoreJumpedPoints(geode::Mod::get()->getSettingValue<bool>("ignore-jumped-points"))
     , m_debug(geode::Mod::get()->getSettingValue<bool>("debug")) {}
 
 void HookedDrawGridLayer::draw() {
@@ -66,8 +69,26 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     auto durations = durationForObject(obj);
 
+    auto speedObjectsCopy = m_speedObjects->shallowCopy();
+
+    // remove all speed objects that are before this object
+    // this could be buggy with rotated gameplay
+    if (fields->m_stripOldArrowTriggers) {
+        auto speedObjectsToRemove = cocos2d::CCArray::create();
+    
+        for (auto speedObject : geode::cocos::CCArrayExt<EffectGameObject*>(speedObjectsCopy)) {
+            if (speedObject->getRealPosition().x >= obj->getRealPosition().x) continue; // in front of trigger
+            if (speedObject->m_speedModType >= -1) continue; // speed change or just reverse
+
+            speedObjectsToRemove->addObject(speedObject);
+        }
+    
+        speedObjectsCopy->removeObjectsInArray(speedObjectsToRemove);
+    }
+
+
     float startTime = LevelTools::timeForPos(
-        obj->getRealPosition(), m_speedObjects,
+        obj->getRealPosition(), speedObjectsCopy,
         (int)m_editorLayer->m_levelSettings->m_startSpeed, obj->m_ordValue,
         obj->m_channelValue, false,
         m_editorLayer->m_levelSettings->m_platformerMode, true, false, 0
@@ -79,7 +100,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         for (float t = 0; t < durations.m_fadeInDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
                 .m_col = col,
-                .m_pos = posForTime(startTime + t, obj)
+                .m_pos = posForTime(startTime + t, obj, speedObjectsCopy)
             });
         }
     }
@@ -92,7 +113,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         for (float t = 0; t < durations.m_baseDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
                 .m_col = col,
-                .m_pos = posForTime(startTime + t, obj)
+                .m_pos = posForTime(startTime + t, obj, speedObjectsCopy)
             });
         }
     }
@@ -105,7 +126,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         for (float t = 0; t < durations.m_fadeOutDuration; t += fields->m_resolution) {
             points.push_back(LinePoint{
                 .m_col = col,
-                .m_pos = posForTime(startTime + t, obj)
+                .m_pos = posForTime(startTime + t, obj, speedObjectsCopy)
             });
         }
     }
@@ -143,15 +164,17 @@ ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
     return ret;
 }
 
-cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj) {
+PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, cocos2d::CCArray* speedObjects) {
     auto fields = m_fields.self();
+
+    PosForTime ret;
 
     // the "current" posForTime/timeForPos position, global var in LevelTools
     // (*(cocos2d::CCPoint*)(geode::base::get() + 0x6a41c0))
 
-    auto ret = LevelTools::posForTimeInternal(
+    auto point = LevelTools::posForTimeInternal(
         time,
-        m_speedObjects,
+        speedObjects,
         (int)m_editorLayer->m_levelSettings->m_startSpeed,
         m_editorLayer->m_levelSettings->m_platformerMode,
         false,
@@ -161,7 +184,7 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
     );
 
     /*
-     * right so fellas why is ret.y += obj->getRealPosition().y; needed
+     * right so fellas why is point.y += obj->getRealPosition().y; needed
      * 
      * when leveltools ends up finishing posForTime on rotated gameplay,
      * getLastGameplayRotated returns true and the y value of the position given
@@ -176,17 +199,14 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
      * to zero, so i ALWAYS need to add y position
      * (2.1 legacy code?)
      *
+     * also note that if 2.2 rotated gameplay has been seen before at ANY time,
+     * new 2.2 stuff will be used to START on, though this is "fixed" by
+     * forcibly removing all arrow triggers before the current trigger
+     *
      * tl;dr - dont add y if gameplay ends on unrotated (2.2) UNLESS we have not
      * seen rotated gameplay (2.1), in which case ALWAYS add y
      *
-     * m_seenRotatedGameplay gets reset at the end of drawLinesForObject
-     * note: this explanation may have contradicted itself or something, ask if
-     * you want a diagram or if it doesnt make sense or something
-     * also note the red channel of debug points store if rotated gameplay has
-     * been seen on this object
-     *
-     * did i only write this to show how much effort it took me to figure this
-     * out? maybe
+     * m_seenRotatedGameplay gets reset at the end of drawLinesForObject!
      */
 
     if (LevelTools::getLastGameplayRotated()) {
@@ -194,7 +214,7 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
     }
 
     if (!LevelTools::getLastGameplayRotated() && !fields->m_seenRotatedGameplayThisObject) {
-        ret.y += obj->getRealPosition().y;
+        point.y += obj->getRealPosition().y;
     }
 
     /*
@@ -226,30 +246,40 @@ cocos2d::CCPoint HookedDrawGridLayer::posForTime(float time, EffectGameObject* o
         // the primary adjustment is the main one, the secondary is just for
         // offset relative to the current axis to make it look nice
         if (LevelTools::getLastGameplayRotated()) {
-            fields->m_thisObjectAdjustment.x += ret.y - fields->m_lastPointThisObject.y; // secondary
-            fields->m_thisObjectAdjustment.y -= ret.y - fields->m_lastPointThisObject.y; // primary
+            if (!fields->m_dontOffsetSecondaryAxis) fields->m_thisObjectAdjustment.x += point.y - fields->m_lastPointThisObject.y; // secondary
+            fields->m_thisObjectAdjustment.y -= point.y - fields->m_lastPointThisObject.y; // primary
         } else {
-            fields->m_thisObjectAdjustment.x -= ret.x - fields->m_lastPointThisObject.x; // primary
-            fields->m_thisObjectAdjustment.y += ret.x - fields->m_lastPointThisObject.x; // secondary
+            fields->m_thisObjectAdjustment.x -= point.x - fields->m_lastPointThisObject.x; // primary
+            if (!fields->m_dontOffsetSecondaryAxis) fields->m_thisObjectAdjustment.y += point.x - fields->m_lastPointThisObject.x; // secondary
         }
+
+        // just changed rotation, the duration line might seem to "jump" here -
+        // so mark it so it's visible in the editor!
+        ret.m_hasJumped = true;
+    } else {
+        ret.m_hasJumped = false;
     }
     
-    ret += fields->m_thisObjectAdjustment;
+    if (fields->m_ignoreJumpedPoints) ret.m_hasJumped = false;
 
-    fields->m_lastPointThisObjectWasRotated = LevelTools::getLastGameplayRotated();
-    fields->m_lastPointThisObjectWasReversed = LevelTools::getLastGameplayReversed();
-    fields->m_lastPointThisObject = ret;
+    point += fields->m_thisObjectAdjustment;
 
     // debug - draw points
     if (fields->m_debug) {
         cocos2d::ccDrawColor4B(
             fields->m_seenRotatedGameplayThisObject ? 255 : 0,
             LevelTools::getLastGameplayRotated() ? 255 : 0,
-            255,
+            LevelTools::getLastGameplayRotated() != fields->m_lastPointThisObjectWasRotated ? 255 : 0,
             255
         );
-        cocos2d::ccDrawCircle(ret, 5, 0.314159f, 5, false);
+        cocos2d::ccDrawCircle(point, 5, 0.314159f, 5, false);
     }
+
+    fields->m_lastPointThisObjectWasRotated = LevelTools::getLastGameplayRotated();
+    fields->m_lastPointThisObjectWasReversed = LevelTools::getLastGameplayReversed();
+    fields->m_lastPointThisObject = point;
+
+    ret.m_pos = point;
 
     return ret;
 }
@@ -291,7 +321,7 @@ constexpr float hue2rgb(float p, float q, float t) {
     return p;
 }
 
-cocos2d::ccColor4B HookedDrawGridLayer::tintColor(cocos2d::ccColor4B col, int amount) {
+cocos2d::ccColor4B HookedDrawGridLayer::tintColor(const cocos2d::ccColor4B& col, int amount) {
     // convert to hsl, tint, convert back
     // most of this taken from eclipse though it really couldve been taken from
     // anywhere
@@ -347,15 +377,48 @@ void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::ve
 
     std::vector<LinePoint> allSegments;
     allSegments.resize(segments.size() + 1);
-    allSegments[0] = LinePoint{ .m_pos = start };
+    allSegments[0] = LinePoint{ .m_pos = { .m_pos = start } };
     std::copy(segments.begin(), segments.end(), allSegments.begin() + 1);
 
     for (int i = 0; i < allSegments.size() - 1; i++) {
-        cocos2d::CCPoint from = allSegments[i].m_pos;
-        cocos2d::CCPoint to = allSegments[i + 1].m_pos;
+        PosForTime from = allSegments[i].m_pos;
+        PosForTime to = allSegments[i + 1].m_pos;
+        bool hasJumped = to.m_hasJumped;
         
         auto col = allSegments[i + 1].m_col;
-        cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
-        cocos2d::ccDrawLine(from, to);
+        if (hasJumped) {
+            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a / 2.f);
+            drawDashedLine(from.m_pos, to.m_pos);
+        } else {
+            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
+            cocos2d::ccDrawLine(from.m_pos, to.m_pos);
+        }
+    }
+}
+
+void HookedDrawGridLayer::drawDashedLine(const cocos2d::CCPoint& start, const cocos2d::CCPoint& end) {
+    float dashLength = 6.f;
+    float gapLength = 2.f;
+    float totalLength = dashLength + gapLength;
+
+    auto vec = end - start;
+    vec = vec.normalize();
+    
+    cocos2d::CCPoint pen = start;
+    float dist = start.getDistance(end);
+    // subtract totalLength*2 to remove last two lines to then be drawn later
+    for (float i = 0; i < dist - totalLength*2; i += totalLength) {
+        pen += vec * totalLength;
+        cocos2d::ccDrawLine(pen, pen + (vec * dashLength));
+    }
+
+    pen += vec * totalLength;
+    cocos2d::ccDrawLine(pen, end);
+
+    if (m_fields->m_debug) {
+        cocos2d::ccDrawColor4B(0, 255, 0, 255);
+        cocos2d::ccDrawCircle(start, 16, 0.f, 3, false);
+        cocos2d::ccDrawColor4B(0, 255, 255, 255);
+        cocos2d::ccDrawCircle(end, 16, 0.785398f, 3, false);
     }
 }

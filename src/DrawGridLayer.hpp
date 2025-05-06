@@ -1,9 +1,14 @@
 #pragma once
 #include <Geode/modify/DrawGridLayer.hpp>
 
+struct PosForTime {
+    cocos2d::CCPoint m_pos;
+    bool m_hasJumped;
+};
+
 struct LinePoint {
     cocos2d::ccColor4B m_col;
-    cocos2d::CCPoint m_pos;
+    PosForTime m_pos;
 };
 
 struct ObjectDuration {
@@ -24,13 +29,20 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
         bool m_lastPointThisObjectWasReversed;
         cocos2d::CCPoint m_thisObjectAdjustment;
         cocos2d::CCPoint m_lastPointThisObject;
+        
 
         // settings
         double m_resolution;
         bool m_cull;
         unsigned int m_limit;
+
+        bool m_stripOldArrowTriggers;
+        bool m_dontOffsetSecondaryAxis;
+        bool m_ignoreJumpedPoints;
+
         bool m_debug;
 
+        
         Fields();
     };
 
@@ -38,13 +50,14 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
 
     void drawLinesForObject(EffectGameObject* obj);
     void drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments);
+    void drawDashedLine(const cocos2d::CCPoint& start, const cocos2d::CCPoint& end);
 
     ObjectDuration durationForObject(EffectGameObject* obj);
     cocos2d::ccColor4B colorForObject(EffectGameObject* obj, LinePart part);
 
-    cocos2d::CCPoint posForTime(float time, EffectGameObject* obj);
+    PosForTime posForTime(float time, EffectGameObject* obj, cocos2d::CCArray* speedObjects);
 
-    cocos2d::ccColor4B tintColor(cocos2d::ccColor4B col, int amount);
+    cocos2d::ccColor4B tintColor(const cocos2d::ccColor4B& col, int amount);
 };
 
 // // patch out random if block lol this might have fixed something you never know (it didnt)
