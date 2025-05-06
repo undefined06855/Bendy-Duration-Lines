@@ -386,11 +386,11 @@ void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::ve
         bool hasJumped = to.m_hasJumped;
         
         auto col = allSegments[i + 1].m_col;
+        cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
+
         if (hasJumped) {
-            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a / 2.f);
             drawDashedLine(from.m_pos, to.m_pos);
         } else {
-            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
             cocos2d::ccDrawLine(from.m_pos, to.m_pos);
         }
     }
@@ -406,13 +406,12 @@ void HookedDrawGridLayer::drawDashedLine(const cocos2d::CCPoint& start, const co
     
     cocos2d::CCPoint pen = start;
     float dist = start.getDistance(end);
-    // subtract totalLength*2 to remove last two lines to then be drawn later
-    for (float i = 0; i < dist - totalLength*2; i += totalLength) {
-        pen += vec * totalLength;
+    // subtract totalLength to remove last two lines to then be drawn later
+    for (float i = 0; i < dist - totalLength; i += totalLength) {
         cocos2d::ccDrawLine(pen, pen + (vec * dashLength));
+        pen += vec * totalLength;
     }
 
-    pen += vec * totalLength;
     cocos2d::ccDrawLine(pen, end);
 
     if (m_fields->m_debug) {
