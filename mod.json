@@ -22,7 +22,7 @@
 		"cull-offscreen": {
 			"name": "Cull Offscreen Triggers",
 			"type": "bool",
-			"description": "When this is enabled, offscreen triggers will not have their duration lines calculated and drawn – this means you won't be able to see their duration line for lengthy triggers, but will improve performance.",
+			"description": "When this is enabled, offscreen triggers will not have their duration lines calculated and drawn - this means you won't be able to see their duration line for lengthy triggers, but will improve performance.",
 			"default": true
 		},
 		"draw-limit": {
