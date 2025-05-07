@@ -1,6 +1,7 @@
 # Bendy Duration Lines
 ## v1.2.0
 - Add option to skip drawing duration lines not on the current layer
+- Make duration lines not on the current layer transparent
 - Adjust how jumped points are drawn
 - Make triggers with no special duration line color more consistent
 - Remove unnecessary checks

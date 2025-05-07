@@ -32,8 +32,8 @@ void HookedDrawGridLayer::draw() {
     glLineWidth(2.f);
     cocos2d::ccGLBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // TODO: perhaps make this more efficient? m_durationObjects should
-    // be ✨sorted✨ by x position and channel or something like that
+    // TODO: perhaps make this more efficient? m_durationObjects should be
+    // already sorted by x position and channel or something like that
     unsigned int count = 0;
     for (auto obj : geode::cocos::CCArrayExt<EffectGameObject*>(m_editorLayer->m_durationObjects)) {
         if (!obj) continue;
