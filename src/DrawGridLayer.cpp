@@ -2,11 +2,10 @@
 
 HookedDrawGridLayer::Fields::Fields()
     : m_seenRotatedGameplayThisObject(false)
-    , m_lastPointThisObjectWasRotated(false)
-    , m_lastPointThisObjectWasReversed(false)
-    , m_thisObjectAdjustment(0.f, 0.f)
+    , m_lastPointWasRotatedThisObject(false)
+    , m_adjustmentThisObject(0.f, 0.f)
     , m_lastPointThisObject(0.f, 0.f)
-
+    
     , m_resolution(geode::Mod::get()->getSettingValue<double>("precision"))
     , m_cull(geode::Mod::get()->getSettingValue<bool>("cull-offscreen"))
     , m_limit(geode::Mod::get()->getSettingValue<int64_t>("draw-limit"))
@@ -135,9 +134,8 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     drawLines(obj->getRealPosition(), points);
 
     fields->m_seenRotatedGameplayThisObject = false;
-    fields->m_lastPointThisObjectWasRotated = false;
-    fields->m_lastPointThisObjectWasReversed = false;
-    fields->m_thisObjectAdjustment = cocos2d::CCPoint{ 0.f, 0.f };
+    fields->m_lastPointWasRotatedThisObject = false;
+    fields->m_adjustmentThisObject = cocos2d::CCPoint{ 0.f, 0.f };
     fields->m_lastPointThisObject = cocos2d::CCPoint{ 0.f, 0.f };
 }
 
@@ -235,22 +233,20 @@ PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, co
      */
 
     // just changed rotation or reversed, meaning we've hit a new arrow trigger
-    if (LevelTools::getLastGameplayRotated() != fields->m_lastPointThisObjectWasRotated
-    // reversed triggers dont seem to need this and it will break them!
-    //  || LevelTools::getLastGameplayReversed() != fields->m_lastPointThisObjectWasReversed
-    ) {
-        fields->m_thisObjectAdjustment = cocos2d::CCPoint{ 0.f, 0.f };
+    // dont need to check for reverse, they work fine and itll break them
+    if (LevelTools::getLastGameplayRotated() != fields->m_lastPointWasRotatedThisObject) {
+        fields->m_adjustmentThisObject = cocos2d::CCPoint{ 0.f, 0.f };
         // compare y positions if rotated, else compare x
         // remember we want to adjust x in terms of y and adjust y in terms of x
         // since we've just rotated
         // the primary adjustment is the main one, the secondary is just for
         // offset relative to the current axis to make it look nice
         if (LevelTools::getLastGameplayRotated()) {
-            if (!fields->m_dontOffsetSecondaryAxis) fields->m_thisObjectAdjustment.x += point.y - fields->m_lastPointThisObject.y; // secondary
-            fields->m_thisObjectAdjustment.y -= point.y - fields->m_lastPointThisObject.y; // primary
+            if (!fields->m_dontOffsetSecondaryAxis) fields->m_adjustmentThisObject.x += point.y - fields->m_lastPointThisObject.y; // secondary
+            fields->m_adjustmentThisObject.y -= point.y - fields->m_lastPointThisObject.y; // primary
         } else {
-            fields->m_thisObjectAdjustment.x -= point.x - fields->m_lastPointThisObject.x; // primary
-            if (!fields->m_dontOffsetSecondaryAxis) fields->m_thisObjectAdjustment.y += point.x - fields->m_lastPointThisObject.x; // secondary
+            fields->m_adjustmentThisObject.x -= point.x - fields->m_lastPointThisObject.x; // primary
+            if (!fields->m_dontOffsetSecondaryAxis) fields->m_adjustmentThisObject.y += point.x - fields->m_lastPointThisObject.x; // secondary
         }
 
         // just changed rotation, the duration line might seem to "jump" here -
@@ -262,21 +258,20 @@ PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, co
     
     if (fields->m_ignoreJumpedPoints) ret.m_hasJumped = false;
 
-    point += fields->m_thisObjectAdjustment;
+    point += fields->m_adjustmentThisObject;
 
     // debug - draw points
     if (fields->m_debug) {
         cocos2d::ccDrawColor4B(
             fields->m_seenRotatedGameplayThisObject ? 255 : 0,
             LevelTools::getLastGameplayRotated() ? 255 : 0,
-            LevelTools::getLastGameplayRotated() != fields->m_lastPointThisObjectWasRotated ? 255 : 0,
+            LevelTools::getLastGameplayRotated() != fields->m_lastPointWasRotatedThisObject ? 255 : 0,
             255
         );
         cocos2d::ccDrawCircle(point, 5, 0.314159f, 5, false);
     }
 
-    fields->m_lastPointThisObjectWasRotated = LevelTools::getLastGameplayRotated();
-    fields->m_lastPointThisObjectWasReversed = LevelTools::getLastGameplayReversed();
+    fields->m_lastPointWasRotatedThisObject = LevelTools::getLastGameplayRotated();
     fields->m_lastPointThisObject = point;
 
     ret.m_pos = point;
