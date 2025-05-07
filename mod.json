@@ -7,7 +7,7 @@
 		"ios": "2.2074"
 	},
 
-	"version": "v1.1.0",
+	"version": "v1.2.0",
 	"id": "undefined0.bendy_duration_lines",
 	"name": "Bendy Duration Lines",
 	"developer": "undefined0",
@@ -22,8 +22,14 @@
 		"cull-offscreen": {
 			"name": "Cull Offscreen Triggers",
 			"type": "bool",
-			"description": "When this is enabled, offscreen triggers will not have their duration lines calculated and drawn - this means you won't be able to see their duration line for lengthy triggers, but will improve performance.",
+			"description": "Skips drawing and calculating duration lines for triggers that are offscreen, which will increase performance.",
 			"default": true
+		},
+		"cull-other-layers": {
+			"name": "Cull Other Layers",
+			"type": "bool",
+			"description": "Skips drawing and calculating duration lines for triggers that are on other layers, which will increase performance.",
+			"default": false
 		},
 		"draw-limit": {
 			"name": "Draw Limit",

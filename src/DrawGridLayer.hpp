@@ -31,7 +31,8 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
 
         // settings
         double m_resolution;
-        bool m_cull;
+        bool m_cullOffscreen;
+        bool m_cullOtherLayers;
         unsigned int m_limit;
         bool m_stripOldArrowTriggers;
         bool m_dontOffsetSecondaryAxis;
