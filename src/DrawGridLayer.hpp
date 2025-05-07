@@ -54,17 +54,3 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
 
     cocos2d::ccColor4B tintColor(const cocos2d::ccColor4B& col, int amount);
 };
-
-// // patch out random if block lol this might have fixed something you never know (it didnt)
-// $execute {
-//     // from 0x3180cc to 0x3180fb
-//     long long start = geode::base::get() + 0x3180cc;
-//     long long end = geode::base::get() + 0x3180fb + 1;
-//     int length = end - start;
-
-//     std::vector<uint8_t> bytes = {};
-//     bytes.resize(length);
-//     std::fill(bytes.begin(), bytes.end(), 0x90);
-
-//     (void)geode::Mod::get()->patch((void*)start, bytes);
-// }
