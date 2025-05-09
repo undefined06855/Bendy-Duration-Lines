@@ -1,4 +1,7 @@
 # Bendy Duration Lines
+## v1.3.0
+- Add option to draw duration lines of spawn triggered triggers
+- Add extended support for spawn triggers to show duration line as well as variation
 ## v1.2.0
 - Add option to skip drawing duration lines not on the current layer
 - Make duration lines not on the current layer transparent
@@ -6,8 +9,8 @@
 - Make triggers with no special duration line color more consistent
 - Remove unnecessary checks
 ## v1.1.0
-- Fix RobTop's code by "hiding" arrow triggers placed before the duration line
-- Indicate "jumped" points with a dashed line instead of keeping it solid
+- Fix RobTop's code by ignoring arrow triggers placed before the duration line
+- Indicate jumped points with a dashed line instead of keeping it solid
 - Store more information in debug points
 - Fix grammatical issues
 - Adjust defaults and ranges in mod settings

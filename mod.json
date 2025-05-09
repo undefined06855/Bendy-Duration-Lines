@@ -7,7 +7,7 @@
 		"ios": "2.2074"
 	},
 
-	"version": "v1.2.0",
+	"version": "v1.3.0",
 	"id": "undefined0.bendy_duration_lines",
 	"name": "Bendy Duration Lines",
 	"developer": "undefined0",
@@ -47,6 +47,11 @@
 			"max": 0.3,
 			"default": 0.05,
 			"control": { "arrows": false, "slider-step": 0.01 }
+		},
+		"ignore-spawn-triggered": {
+			"name": "Ignore Spawn Triggered Triggers",
+			"type": "bool",
+			"default": false
 		},
 		"_": {
 			"name": "Debug and Other Options",

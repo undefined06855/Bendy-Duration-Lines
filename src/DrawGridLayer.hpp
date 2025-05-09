@@ -4,6 +4,8 @@
 struct PosForTime {
     cocos2d::CCPoint m_pos;
     bool m_hasJumped;
+    bool m_isRotated;
+    float m_time;
 };
 
 struct LinePoint {
@@ -34,6 +36,7 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
         bool m_cullOffscreen;
         bool m_cullOtherLayers;
         unsigned int m_limit;
+        bool m_ignoreSpawnTriggered;
         bool m_stripOldArrowTriggers;
         bool m_dontOffsetSecondaryAxis;
         bool m_ignoreJumpedPoints;
@@ -45,7 +48,7 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
     void draw();
 
     void drawLinesForObject(EffectGameObject* obj);
-    void drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments);
+    void drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments, bool forceDashed);
     void drawDashedLine(const cocos2d::CCPoint& start, const cocos2d::CCPoint& end);
 
     ObjectDuration durationForObject(EffectGameObject* obj);

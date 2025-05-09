@@ -1,4 +1,5 @@
 #include "DrawGridLayer.hpp"
+#include "Geode/utils/cocos.hpp"
 
 HookedDrawGridLayer::Fields::Fields()
     : m_seenRotatedGameplayThisObject(false)
@@ -10,6 +11,7 @@ HookedDrawGridLayer::Fields::Fields()
     , m_cullOffscreen(geode::Mod::get()->getSettingValue<bool>("cull-offscreen"))
     , m_cullOtherLayers(geode::Mod::get()->getSettingValue<bool>("cull-other-layers"))
     , m_limit(geode::Mod::get()->getSettingValue<int64_t>("draw-limit"))
+    , m_ignoreSpawnTriggered(geode::Mod::get()->getSettingValue<bool>("ignore-spawn-triggered"))
     , m_stripOldArrowTriggers(geode::Mod::get()->getSettingValue<bool>("strip-old-arrow-triggers"))
     , m_dontOffsetSecondaryAxis(geode::Mod::get()->getSettingValue<bool>("dont-offset-secondary-axis"))
     , m_ignoreJumpedPoints(geode::Mod::get()->getSettingValue<bool>("ignore-jumped-points"))
@@ -25,17 +27,18 @@ void HookedDrawGridLayer::draw() {
 
     if (m_editorLayer->m_playbackMode == PlaybackMode::Playing || !m_editorLayer->m_showDurationLines) return;
     if (!m_editorLayer->m_durationObjects) return;
+
+    auto durationObjectsCopy = m_editorLayer->m_durationObjects->shallowCopy();
+    durationObjectsCopy->addObjectsFromArray(m_editorLayer->m_spawnTriggers);
     
-    auto durationObjectCount = m_editorLayer->m_durationObjects->count();
-    if (durationObjectCount == 0) return;
+    auto durationObjectsCount = durationObjectsCopy->count();
+    if (durationObjectsCount == 0) return;
     
     glLineWidth(2.f);
     cocos2d::ccGLBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // TODO: perhaps make this more efficient? m_durationObjects should be
-    // already sorted by x position and channel or something like that
     unsigned int count = 0;
-    for (auto obj : geode::cocos::CCArrayExt<EffectGameObject*>(m_editorLayer->m_durationObjects)) {
+    for (auto obj : geode::cocos::CCArrayExt<EffectGameObject*>(durationObjectsCopy)) {
         if (!obj) continue;
         if (!obj->getParent() && fields->m_cullOffscreen) continue;
         if (
@@ -73,7 +76,7 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     if (
         // 0121 - hide invisible checkbox in editor
         (GameManager::get()->getGameVariable("0121") && (obj->m_isHide || obj->m_isGroupDisabled) && !obj->m_isSelected)
-        || obj->m_isSpawnTriggered
+        || (obj->m_isSpawnTriggered && fields->m_ignoreSpawnTriggered)
     ) return;
 
     auto durations = durationForObject(obj);
@@ -82,6 +85,8 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     // remove all speed objects that are before this object
     // this could be buggy with rotated gameplay
+    // TODO: perhaps make this more efficient? should be already sorted by x
+    // position and channel or something like that
     if (fields->m_stripOldArrowTriggers) {
         auto speedObjectsToRemove = cocos2d::CCArray::create();
     
@@ -98,9 +103,11 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 
     float startTime = LevelTools::timeForPos(
         obj->getRealPosition(), speedObjectsCopy,
-        (int)m_editorLayer->m_levelSettings->m_startSpeed, obj->m_ordValue,
-        obj->m_channelValue, false,
-        m_editorLayer->m_levelSettings->m_platformerMode, true, false, 0
+        (int)m_editorLayer->m_levelSettings->m_startSpeed,
+        obj->m_ordValue, obj->m_channelValue,
+        false,
+        m_editorLayer->m_levelSettings->m_platformerMode,
+        true, false, 69
     );
 
     // fade in line
@@ -140,8 +147,98 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         }
     }
 
-    // and draw them all
-    drawLines(obj->getRealPosition(), points);
+    startTime += durations.m_fadeOutDuration;
+
+    bool isSpawnTrigger = obj->m_objectID == 1268;
+
+    // draw small vertical line at the end
+    if (isSpawnTrigger) {
+        auto cast = static_cast<SpawnTriggerGameObject*>(obj);
+        
+        auto col = colorForObject(obj, LinePart::Base);
+        cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
+
+        PosForTime end;
+        if (points.size() != 0) {
+            end = points.back().m_pos;
+        } else {
+            end = {
+                .m_pos = obj->getRealPosition(),
+                .m_isRotated = false
+            };
+        }
+
+        if (cast->m_delayRange < 0.01f) {
+            if (end.m_isRotated) {
+                cocos2d::ccDrawLine(
+                    { end.m_pos.x + 4, end.m_pos.y },
+                    { end.m_pos.x - 4, end.m_pos.y }
+                );
+            } else {
+                cocos2d::ccDrawLine(
+                    { end.m_pos.x, end.m_pos.y + 4 },
+                    { end.m_pos.x, end.m_pos.y - 4 }
+                );
+            }
+        } else {
+            auto left = posForTime(startTime - cast->m_delayRange, obj, speedObjectsCopy);
+            auto right = posForTime(startTime + cast->m_delayRange, obj, speedObjectsCopy);
+
+            // draw the lines for left, right and end, making sure they get
+            // rotated if needed
+            if (left.m_isRotated) {
+                cocos2d::ccDrawLine(
+                    { left.m_pos.x + 8, left.m_pos.y },
+                    { left.m_pos.x - 8, left.m_pos.y }
+                );
+            } else {
+                cocos2d::ccDrawLine(
+                    { left.m_pos.x, left.m_pos.y + 8 },
+                    { left.m_pos.x, left.m_pos.y - 8 }
+                );
+            }
+
+            if (end.m_isRotated) {
+                cocos2d::ccDrawLine(
+                    { end.m_pos.x + 4, end.m_pos.y },
+                    { end.m_pos.x - 4, end.m_pos.y }
+                );
+            } else {
+                cocos2d::ccDrawLine(
+                    { end.m_pos.x, end.m_pos.y + 4 },
+                    { end.m_pos.x, end.m_pos.y - 4 }
+                );
+            }
+
+            if (right.m_isRotated) {
+                cocos2d::ccDrawLine(
+                    { right.m_pos.x + 8, right.m_pos.y },
+                    { right.m_pos.x - 8, right.m_pos.y }
+                );    
+            } else {
+                cocos2d::ccDrawLine(
+                    { right.m_pos.x, right.m_pos.y + 8 },
+                    { right.m_pos.x, right.m_pos.y - 8 }
+                );    
+            }
+
+            // draw dashed lines up to right
+            points.push_back({
+                .m_col = colorForObject(obj, LinePart::Base),
+                .m_pos = right
+            });
+
+            // make all points after left half opacity
+            for (auto& point : points) {
+                if (point.m_pos.m_time > startTime - cast->m_delayRange) {
+                    point.m_col.a /= 2;
+                }
+            }
+        }
+    }
+
+    // if this is a spawn trigger, force dashed (third param)
+    drawLines(obj->getRealPosition(), points, isSpawnTrigger);
 
     fields->m_seenRotatedGameplayThisObject = false;
     fields->m_lastPointWasRotatedThisObject = false;
@@ -155,18 +252,27 @@ ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
 
     ret.m_baseDuration = obj->m_duration;
 
-    if (id == 1006) { // pulse trigger
-        ret.m_baseDuration = obj->m_holdDuration;
-        ret.m_fadeInDuration = obj->m_fadeInDuration;
-        ret.m_fadeOutDuration = obj->m_fadeOutDuration;
-    } else if (id == 3602) { // sfx trigger
-        auto cast = static_cast<SFXTriggerGameObject*>(obj);
-        ret.m_baseDuration = cast->m_soundDuration;
-        ret.m_fadeInDuration = cast->m_fadeIn / 1000.f;
-        ret.m_fadeOutDuration = cast->m_fadeOut / 1000.f;
-    } else {
-        ret.m_fadeInDuration = 0.f;
-        ret.m_fadeOutDuration = 0.f;
+    switch(id) {
+        case 1006: { // pulse
+            ret.m_baseDuration = obj->m_holdDuration;
+            ret.m_fadeInDuration = obj->m_fadeInDuration;
+            ret.m_fadeOutDuration = obj->m_fadeOutDuration;
+            break;
+        }
+        
+        case 3602: { // sfx
+            auto cast = static_cast<SFXTriggerGameObject*>(obj);
+            ret.m_baseDuration = cast->m_soundDuration;
+            ret.m_fadeInDuration = cast->m_fadeIn / 1000.f;
+            ret.m_fadeOutDuration = cast->m_fadeOut / 1000.f;
+            break;
+        }
+
+        case 1268: // spawn
+            ret.m_baseDuration = static_cast<SpawnTriggerGameObject*>(obj)->m_spawnDelay;
+        default:
+            ret.m_fadeInDuration = 0.f;
+            ret.m_fadeOutDuration = 0.f;
     }
 
     return ret;
@@ -188,7 +294,7 @@ PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, co
         false,
         true,
         m_editorLayer->m_gameState.m_rotateChannel,
-        1 // unused
+        69 // unused
     );
 
     /*
@@ -214,8 +320,6 @@ PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, co
      * tl;dr - dont add y if gameplay ends on unrotated (2.2) UNLESS we have not
      * seen rotated gameplay (2.1), in which case ALWAYS add y
      * if we're rotated, never add y, never needed!
-     *
-     * m_seenRotatedGameplay gets reset at the end of drawLinesForObject!
      */
 
     if (!LevelTools::getLastGameplayRotated() && !fields->m_seenRotatedGameplayThisObject) {
@@ -286,6 +390,8 @@ PosForTime HookedDrawGridLayer::posForTime(float time, EffectGameObject* obj, co
     fields->m_lastPointThisObject = point;
 
     ret.m_pos = point;
+    ret.m_time = time;
+    ret.m_isRotated = LevelTools::getLastGameplayRotated();
 
     return ret;
 }
@@ -379,7 +485,7 @@ cocos2d::ccColor4B HookedDrawGridLayer::tintColor(const cocos2d::ccColor4B& col,
     return { static_cast<GLubyte>(r*255), static_cast<GLubyte>(g*255), static_cast<GLubyte>(b*255), col.a };
 }
 
-void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments) {
+void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments, bool forceDashed) {
     // could most likely be improved by using ccDrawLines for segments next to
     // each other that have the same colour
 
@@ -395,11 +501,12 @@ void HookedDrawGridLayer::drawLines(const cocos2d::CCPoint& start, const std::ve
         
         auto col = allSegments[i + 1].m_col;
 
-        if (hasJumped) {
-            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a * .5f);
+        cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
+        if (hasJumped || forceDashed) {
+            // if this isnt forced, turn down opacity
+            if (!forceDashed) cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a / 2);
             drawDashedLine(from.m_pos, to.m_pos);
         } else {
-            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
             cocos2d::ccDrawLine(from.m_pos, to.m_pos);
         }
     }
