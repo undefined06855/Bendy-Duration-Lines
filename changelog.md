@@ -1,4 +1,6 @@
 # Bendy Duration Lines
+## v1.4.1
+- Fix issue with extremely small intervals in shake triggers
 ## v1.4.0
 - Add extended support for shake triggers to show interval and strength (suggested by [champik665](user:26344243))
 ## v1.3.0

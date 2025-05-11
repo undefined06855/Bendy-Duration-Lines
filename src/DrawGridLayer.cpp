@@ -552,7 +552,6 @@ void HookedDrawGridLayer::drawDashedLine(const cocos2d::CCPoint& start, const co
 }
 
 constexpr float HookedDrawGridLayer::calculateZigZag(float time, float strength, float interval) {
-    if (interval == 0) interval = 0.03f;
     float inverseInterval = 1.f / (2.f * interval);
     float inverseIntervalTime = inverseInterval * time;
     return strength * (std::abs(2.f * (inverseIntervalTime - std::floor(inverseIntervalTime + .5f))) - .5f) * 30.f;
@@ -566,7 +565,8 @@ void HookedDrawGridLayer::drawLinesWithZigZag(EffectGameObject* start, const std
     allSegments[0] = LinePoint{ .m_pos = { .m_pos = start->getRealPosition() } };
     std::copy(segments.begin(), segments.end(), allSegments.begin() + 1);
 
-    if (interval == 0.f) {
+    // small or zero interval
+    if (interval < 0.01f) {
         interval = 0.01f;
     }
 
