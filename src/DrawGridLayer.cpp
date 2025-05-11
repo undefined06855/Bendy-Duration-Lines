@@ -1,5 +1,6 @@
 #include "DrawGridLayer.hpp"
 #include "Geode/utils/cocos.hpp"
+#include <cmath>
 
 HookedDrawGridLayer::Fields::Fields()
     : m_seenRotatedGameplayThisObject(false)
@@ -110,6 +111,8 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
         true, false, 69
     );
 
+    float actualStartTime = startTime;
+
     // fade in line
     if (durations.m_fadeInDuration >= 0.01f) {
         auto col = colorForObject(obj, LinePart::FadeIn);
@@ -150,9 +153,15 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
     startTime += durations.m_fadeOutDuration;
 
     bool isSpawnTrigger = obj->m_objectID == 1268;
+    bool isShakeTrigger = obj->m_objectID == 1520;
 
-    // draw small vertical line at the end
-    if (isSpawnTrigger) {
+    if (isShakeTrigger) {
+        // draw with zigzag
+        // pass in obj and not object position because we need to use it later
+        // same with speedObjectsCopy
+        drawLinesWithZigZag(obj, points, obj->m_shakeStrength, obj->m_shakeInterval, speedObjectsCopy, actualStartTime);
+    } else if (isSpawnTrigger) {
+        // draw small vertical line at the end
         auto cast = static_cast<SpawnTriggerGameObject*>(obj);
         
         auto col = colorForObject(obj, LinePart::Base);
@@ -235,10 +244,13 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
                 }
             }
         }
-    }
 
-    // if this is a spawn trigger, force dashed (third param)
-    drawLines(obj->getRealPosition(), points, isSpawnTrigger);
+        // true makes the line forced as dashed for spawn triggers
+        drawLines(obj->getRealPosition(), points, true);
+    } else {
+        // normal objects
+        drawLines(obj->getRealPosition(), points, false);
+    }
 
     fields->m_seenRotatedGameplayThisObject = false;
     fields->m_lastPointWasRotatedThisObject = false;
@@ -536,5 +548,102 @@ void HookedDrawGridLayer::drawDashedLine(const cocos2d::CCPoint& start, const co
         cocos2d::ccDrawCircle(start, 16, 0.f, 3, false);
         cocos2d::ccDrawColor4B(0, 255, 255, 255);
         cocos2d::ccDrawCircle(end, 16, 0.785398f, 3, false);
+    }
+}
+
+constexpr float HookedDrawGridLayer::calculateZigZag(float time, float strength, float interval) {
+    if (interval == 0) interval = 0.03f;
+    float inverseInterval = 1.f / (2.f * interval);
+    float inverseIntervalTime = inverseInterval * time;
+    return strength * (std::abs(2.f * (inverseIntervalTime - std::floor(inverseIntervalTime + .5f))) - .5f) * 30.f;
+}
+
+void HookedDrawGridLayer::drawLinesWithZigZag(EffectGameObject* start, const std::vector<LinePoint>& segments, float strength, float interval, cocos2d::CCArray* speedObjects, float startTime) {
+    auto fields = m_fields.self();
+
+    std::vector<LinePoint> allSegments;
+    allSegments.resize(segments.size() + 1);
+    allSegments[0] = LinePoint{ .m_pos = { .m_pos = start->getRealPosition() } };
+    std::copy(segments.begin(), segments.end(), allSegments.begin() + 1);
+
+    if (interval == 0.f) {
+        interval = 0.01f;
+    }
+
+    // reset stuff to ensure any posForTime calls are correct
+    fields->m_seenRotatedGameplayThisObject = false;
+    fields->m_lastPointWasRotatedThisObject = false;
+    fields->m_adjustmentThisObject = cocos2d::CCPoint{ 0.f, 0.f };
+    fields->m_lastPointThisObject = cocos2d::CCPoint{ 0.f, 0.f };
+
+    // add in peaks and troughs
+    int peakTroughCount = start->m_duration / interval;
+    allSegments.reserve(allSegments.size() + peakTroughCount);
+    int lastInsertionPoint = -1;
+    auto col = colorForObject(start, LinePart::Base);
+    for (int i = 0; i < peakTroughCount; i++) {
+        float time = startTime + (i * interval);
+
+        // FIXME: a few bugs here since posForTime sets stuff for this object
+        // inconsistently with the normal posForTime usage - makes this somewhat
+        // buggy
+        auto extraPoint = LinePoint{
+            .m_col = col,
+            .m_pos = posForTime(time, start, speedObjects)
+        };
+
+        // find where to insert
+        for (int j = lastInsertionPoint + 1; j < allSegments.size(); j++) {
+            auto& el = allSegments[j];
+            if (el.m_pos.m_time > time) {
+                lastInsertionPoint = j;
+                allSegments.insert(allSegments.begin() + j, extraPoint);
+                break;
+            }
+        }
+
+        if (fields->m_debug) {
+            auto pos = extraPoint.m_pos;
+            if (pos.m_isRotated) {
+                pos.m_pos.x += calculateZigZag(pos.m_time - startTime, strength, interval);
+            } else {
+                pos.m_pos.y += calculateZigZag(pos.m_time - startTime, strength, interval);
+            }
+            cocos2d::ccDrawColor4B(255, 255, 0, 255);
+            cocos2d::ccDrawCircle(pos.m_pos, 3, 0.f, 4, false);
+        }
+    }
+
+    for (int i = 0; i < allSegments.size() - 1; i++) {
+        PosForTime from = allSegments[i].m_pos;
+        PosForTime to = allSegments[i + 1].m_pos;
+        bool hasJumped = to.m_hasJumped;
+
+        from.m_time -= startTime;
+        to.m_time -= startTime;
+
+        auto col = allSegments[i + 1].m_col;
+
+        // multiply x or y for from and to by the zig zag amount
+        if (from.m_isRotated) {
+            from.m_pos.x += calculateZigZag(from.m_time, strength, interval);
+        } else {
+            from.m_pos.y += calculateZigZag(from.m_time, strength, interval);
+        }
+
+        if (to.m_isRotated) {
+            to.m_pos.x += calculateZigZag(to.m_time, strength, interval);
+        } else {
+            to.m_pos.y += calculateZigZag(to.m_time, strength, interval);
+        }
+
+        // then draw like normal point
+        if (hasJumped) {
+            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a / 2);
+            drawDashedLine(from.m_pos, to.m_pos);
+        } else {
+            cocos2d::ccDrawColor4B(col.r, col.g, col.b, col.a);
+            cocos2d::ccDrawLine(from.m_pos, to.m_pos);
+        }
     }
 }

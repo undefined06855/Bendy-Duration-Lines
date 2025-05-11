@@ -50,6 +50,8 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
     void drawLinesForObject(EffectGameObject* obj);
     void drawLines(const cocos2d::CCPoint& start, const std::vector<LinePoint>& segments, bool forceDashed);
     void drawDashedLine(const cocos2d::CCPoint& start, const cocos2d::CCPoint& end);
+    constexpr float calculateZigZag(float time, float strength, float interval);
+    void drawLinesWithZigZag(EffectGameObject* start, const std::vector<LinePoint>& segments, float strength, float interval, cocos2d::CCArray* speedObjects, float startTime);
 
     ObjectDuration durationForObject(EffectGameObject* obj);
     cocos2d::ccColor4B colorForObject(EffectGameObject* obj, LinePart part);

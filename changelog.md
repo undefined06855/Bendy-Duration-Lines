@@ -1,7 +1,9 @@
 # Bendy Duration Lines
+## v1.4.0
+- Add extended support for shake triggers to show interval and strength (suggested by [champik665](user:26344243))
 ## v1.3.0
 - Add option to draw duration lines of spawn triggered triggers
-- Add extended support for spawn triggers to show duration line as well as variation
+- Add extended support for spawn triggers to the show duration line as well as variation
 ## v1.2.0
 - Add option to skip drawing duration lines not on the current layer
 - Make duration lines not on the current layer transparent
