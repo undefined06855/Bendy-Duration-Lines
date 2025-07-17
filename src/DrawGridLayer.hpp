@@ -37,9 +37,11 @@ class $modify(HookedDrawGridLayer, DrawGridLayer) {
         bool m_cullOtherLayers;
         unsigned int m_limit;
         bool m_ignoreSpawnTriggered;
+        
         bool m_stripOldArrowTriggers;
         bool m_dontOffsetSecondaryAxis;
         bool m_ignoreJumpedPoints;
+        int m_durationLimit;
         bool m_debug;
         
         Fields();

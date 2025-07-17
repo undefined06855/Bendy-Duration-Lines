@@ -1,85 +1,96 @@
 {
-	"geode": "4.4.0",
-	"gd": {
-		"win": "2.2074",
-		"android": "2.2074",
-		"mac": "2.2074",
-		"ios": "2.2074"
-	},
+    "geode": "4.6.2",
+    "gd": {
+        "win": "2.2074",
+        "android": "2.2074",
+        "mac": "2.2074",
+        "ios": "2.2074"
+    },
 
-	"version": "v1.4.1",
-	"id": "undefined0.bendy_duration_lines",
-	"name": "Bendy Duration Lines",
-	"developer": "undefined0",
-	"description": "Allows duration lines in the editor to bend!",
-	"tags": [ "editor", "enhancement" ],
+    "version": "v1.4.2",
+    "id": "undefined0.bendy_duration_lines",
+    "name": "Bendy Duration Lines",
+    "developer": "undefined0",
+    "description": "Allows duration lines in the editor to bend!",
+    "tags": [ "editor", "enhancement" ],
 
-	"links": {
-		"source": "https://github.com/undefined06855/Bendy-Duration-Lines"
-	},
+    "links": {
+        "source": "https://github.com/undefined06855/Bendy-Duration-Lines"
+    },
 
-	"settings": {
-		"cull-offscreen": {
-			"name": "Cull Offscreen Triggers",
-			"type": "bool",
-			"description": "Skips drawing and calculating duration lines for triggers that are offscreen, which will increase performance.",
-			"default": true
-		},
-		"cull-other-layers": {
-			"name": "Cull Other Layers",
-			"type": "bool",
-			"description": "Skips drawing and calculating duration lines for triggers that are on other layers, which will increase performance.",
-			"default": false
-		},
-		"draw-limit": {
-			"name": "Draw Limit",
-			"type": "int",
-			"min": 20,
-			"max": 700,
-			"default": 400,
-			"control": { "arrows": false, "slider-step": 10 }
-		},
-		"precision": {
-			"name": "Line Precision (seconds)",
-			"type": "float",
-			"description": "Each part of each duration line is split up into segments of this length in seconds to get the position of that segment at that point in time.\n\nHigher number = less precise = higher performance",
-			"min": 0.02,
-			"max": 0.3,
-			"default": 0.05,
-			"control": { "arrows": false, "slider-step": 0.01 }
-		},
-		"ignore-spawn-triggered": {
-			"name": "Ignore Spawn Triggered Triggers",
-			"type": "bool",
-			"default": false
-		},
-		"_": {
-			"name": "Debug and Other Options",
-			"type": "title",
-			"description": "Settings that should not need to be changed unless you are certain you know what you are doing and what changing the settings will do!"
-		},
-		"strip-old-arrow-triggers": {
-			"name": "Remove Old Arrow Triggers",
-			"type": "bool",
-			"description": "This fixes a few issues that occur when triggers are placed after arrow objects that make the player move vertically. This attempts to fix that by ignoring any arrow triggers or similar placed on an x position before the current trigger.\n\nThis will break in levels with large upwards or downwards rotated sections, however, so can be disabled here.",
-			"default": true
-		},
-		"dont-offset-secondary-axis": {
-			"name": "Don't Offset Secondary axis",
-			"type": "bool",
-			"description": "Every time gameplay rotates, GD (wrongly, though less noticeable in vanilla) \"snaps\" the duration line to the arrow trigger, which this mod attempts to fix by offsetting the primary and secondary axis after a rotation, depending on whether the player would have just rotated or not (when rotated, Y axis is primary, when unrotated, X axis is primary), and the amount depending on the distance between the last point and current point on a certain axis. The primary axis offset is required for duration lines to be readable and actually correct, but the secondary axis offset may sometimes cause lines to seem longer or more incorrect than they actually would.\n\nIf extreme accuracy is required at the cost of legibility, disable this option.",
-			"default": false
-		},
-		"ignore-jumped-points": {
-			"name": "Ignore Jumped Points",
-			"type": "bool",
-			"description": "When a point is snapped to an arrow trigger, as described in the description of the above setting, this mod will adjust the offset as described in the setting above, which can cause a \"jumped\" point, where a point seems to be further away from the previous points and can cause confusion about where a trigger's duration line actually is and where it just happens to connect two points together. Jumped points are marked with a dotted line between them, to show the line extends from the same trigger.\n\nThis setting will disable the dashed line, and treat all points as if they were not jumped, which looks more pleasing but may be more confusing or less readable.",
-			"default": false
-		},
-		"debug": {
-			"name": "Draw Debug Points",
-			"type": "bool",
-			"default": false
-		}
-	}
+    "settings": {
+        "cull-offscreen": {
+            "name": "Cull Offscreen Triggers",
+            "type": "bool",
+            "description": "Skips drawing and calculating duration lines for triggers that are offscreen, which will increase performance.",
+            "default": true
+        },
+        "cull-other-layers": {
+            "name": "Cull Other Layers",
+            "type": "bool",
+            "description": "Skips drawing and calculating duration lines for triggers that are on other layers, which will increase performance.",
+            "default": false
+        },
+        "draw-limit": {
+            "name": "Draw Limit",
+            "type": "int",
+			"description": "The maximum amount of triggers that duration lines get drawn for.",
+            "min": 20,
+            "max": 700,
+            "default": 400,
+            "control": { "arrows": false, "slider-step": 10 }
+        },
+        "duration-limit": {
+            "name": "Duration Limit",
+            "type": "int",
+            "description": "The limit (in seconds) that a duration line will be calculated for, to prevent lag with large duration triggers.",
+            "default": 120,
+            "min": 20,
+            "max": 300,
+            "control": { "arrows": false, "slider-step": 5 }
+        },
+        "precision": {
+            "name": "Line Precision (seconds)",
+            "type": "float",
+            "description": "Each part of each duration line is split up into segments of this length in seconds to get the position of that segment at that point in time.\n\nHigher number = less precise = higher performance",
+            "min": 0.02,
+            "max": 0.3,
+            "default": 0.05,
+            "control": { "arrows": false, "slider-step": 0.01 }
+        },
+        "ignore-spawn-triggered": {
+            "name": "Ignore Spawn Triggered Triggers",
+            "type": "bool",
+            "default": false
+        },
+
+        "_": {
+            "name": "Debug and Other Options",
+            "type": "title",
+            "description": "Settings that should not need to be changed unless you are certain you know what you are doing and what changing the settings will do!"
+        },
+        "strip-old-arrow-triggers": {
+            "name": "Remove Old Arrow Triggers",
+            "type": "bool",
+            "description": "This fixes a few issues that occur when triggers are placed after arrow objects that make the player move vertically. This attempts to fix that by ignoring any arrow triggers or similar placed on an x position before the current trigger.\n\nThis will break in levels with large upwards or downwards rotated sections, however, so can be disabled here.",
+            "default": true
+        },
+        "dont-offset-secondary-axis": {
+            "name": "Don't Offset Secondary axis",
+            "type": "bool",
+            "description": "Every time gameplay rotates, GD (wrongly, though less noticeable in vanilla) \"snaps\" the duration line to the arrow trigger, which this mod attempts to fix by offsetting the primary and secondary axis after a rotation, depending on whether the player would have just rotated or not (when rotated, Y axis is primary, when unrotated, X axis is primary), and the amount depending on the distance between the last point and current point on a certain axis. The primary axis offset is required for duration lines to be readable and actually correct, but the secondary axis offset may sometimes cause lines to seem longer or more incorrect than they actually would.\n\nIf extreme accuracy is required at the cost of legibility, disable this option.",
+            "default": false
+        },
+        "ignore-jumped-points": {
+            "name": "Ignore Jumped Points",
+            "type": "bool",
+            "description": "When a point is snapped to an arrow trigger, as described in the description of the above setting, this mod will adjust the offset as described in the setting above, which can cause a \"jumped\" point, where a point seems to be further away from the previous points and can cause confusion about where a trigger's duration line actually is and where it just happens to connect two points together. Jumped points are marked with a dotted line between them, to show the line extends from the same trigger.\n\nThis setting will disable the dashed line, and treat all points as if they were not jumped, which looks more pleasing but may be more confusing or less readable.",
+            "default": false
+        },
+        "debug": {
+            "name": "Draw Debug Points",
+            "type": "bool",
+            "default": false
+        }
+    }
 }

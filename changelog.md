@@ -1,4 +1,6 @@
 # Bendy Duration Lines
+## v1.4.2
+- Add option to limit the duration of triggers with extremely long durations
 ## v1.4.1
 - Fix issue with extremely small intervals in shake triggers
 ## v1.4.0

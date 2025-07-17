@@ -12,7 +12,9 @@ HookedDrawGridLayer::Fields::Fields()
     , m_cullOffscreen(geode::Mod::get()->getSettingValue<bool>("cull-offscreen"))
     , m_cullOtherLayers(geode::Mod::get()->getSettingValue<bool>("cull-other-layers"))
     , m_limit(geode::Mod::get()->getSettingValue<int64_t>("draw-limit"))
+    , m_durationLimit(geode::Mod::get()->getSettingValue<int64_t>("duration-limit"))
     , m_ignoreSpawnTriggered(geode::Mod::get()->getSettingValue<bool>("ignore-spawn-triggered"))
+
     , m_stripOldArrowTriggers(geode::Mod::get()->getSettingValue<bool>("strip-old-arrow-triggers"))
     , m_dontOffsetSecondaryAxis(geode::Mod::get()->getSettingValue<bool>("dont-offset-secondary-axis"))
     , m_ignoreJumpedPoints(geode::Mod::get()->getSettingValue<bool>("ignore-jumped-points"))
@@ -259,6 +261,8 @@ void HookedDrawGridLayer::drawLinesForObject(EffectGameObject* obj) {
 }
 
 ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
+    auto fields = m_fields.self();
+
     int id = obj->m_objectID;
     ObjectDuration ret;
 
@@ -285,6 +289,25 @@ ObjectDuration HookedDrawGridLayer::durationForObject(EffectGameObject* obj) {
         default:
             ret.m_fadeInDuration = 0.f;
             ret.m_fadeOutDuration = 0.f;
+    }
+
+    auto total = ret.m_fadeInDuration + ret.m_baseDuration + ret.m_fadeOutDuration;
+    if (total > fields->m_durationLimit) {
+        float excess = total - fields->m_durationLimit;
+
+        float toRemove = std::min(ret.m_fadeOutDuration, excess);
+        ret.m_fadeOutDuration -= toRemove;
+        excess -= toRemove;
+
+        if (excess > 0.f) {
+            toRemove = std::min(ret.m_baseDuration, excess);
+            ret.m_baseDuration -= toRemove;
+            excess -= toRemove;
+        }
+
+        if (excess > 0.f) {
+            ret.m_fadeInDuration -= std::min(ret.m_fadeInDuration, excess);
+        }
     }
 
     return ret;
