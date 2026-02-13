@@ -1,4 +1,6 @@
 # Bendy Duration Lines
+## v1.4.3
+- Geode v5 and GD 2.2081 support!
 ## v1.4.2
 - Add option to limit the duration of triggers with extremely long durations
 ## v1.4.1

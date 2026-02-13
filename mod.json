@@ -1,13 +1,13 @@
 {
-    "geode": "4.6.2",
+    "geode": "5.0.0-alpha.2",
     "gd": {
-        "win": "2.2074",
-        "android": "2.2074",
-        "mac": "2.2074",
-        "ios": "2.2074"
+        "win": "2.2081",
+        "android": "2.2081",
+        "mac": "2.2081",
+        "ios": "2.2081"
     },
 
-    "version": "v1.4.2",
+    "version": "v1.4.3",
     "id": "undefined0.bendy_duration_lines",
     "name": "Bendy Duration Lines",
     "developer": "undefined0",
