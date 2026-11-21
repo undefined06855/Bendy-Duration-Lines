@@ -1,4 +1,7 @@
 # Bendy Duration Lines
+## v1.5.0
+- Added Geode v6 and GD 2.2091 support!
+
 ## v1.4.3
 - Geode v5 and GD 2.2081 support!
 ## v1.4.2
